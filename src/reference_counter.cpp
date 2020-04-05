@@ -29,8 +29,8 @@ template<class T> class limit_ptr {
 
         int const getCount() const;
 
-        void deepCopy(limit_ptr<T> const & other);
         void deepCopy();
+        void deepCopy(limit_ptr<T> const & other);
 };
 
 template<class T> int * const limit_ptr<T>::get_count_ptr() const { return this->count; }
