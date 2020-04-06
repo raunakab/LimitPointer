@@ -6,14 +6,16 @@
 
 template<class T> class limit_ptr {
     private:
-        std::pair<int,int const> * count = new std::pair<int, int const>(1,-1);
         T * subject = nullptr;
+        std::pair<int,int const> * count = nullptr;
 
-        std::pair<int,int const> * const get_count_ptr() const;
         T * const get_subject_ptr() const;
+        std::pair<int,int const> * const get_count_ptr() const;
+        void new_copy(T * const subject, int const limit);
 
-        void increment_count() const;
-        void decrement_count();
+        bool const switch_away();
+        bool const switch_to(T * const subject, std::pair<int,int const> & count);
+        bool const at_capacity(std::pair<int,int const> & count) const;
 
     public:
         limit_ptr();
@@ -28,69 +30,155 @@ template<class T> class limit_ptr {
         T * const operator->() const;
         T & operator*() const;
 
+        void set(T * const subject, int const limit);
+
         int const getCount() const;
         int const getLimit() const;
 
         void deepCopy();
+        void deepCopy(int const limit);
         void deepCopy(limit_ptr<T> const & other);
+        void deepCopy(limit_ptr<T> const & other, int const limit);
 };
 
-template<class T> std::pair<int,int const> * const limit_ptr<T>::get_count_ptr() const { return this->count; }
-template<class T> T * const limit_ptr<T>::get_subject_ptr() const { return this->subject; }
 
-template<class T> void limit_ptr<T>::increment_count() const {
-    if (this->count) ++(this->count->first);
+
+template<class T> T * const limit_ptr<T>::get_subject_ptr() const { return this->subject; }
+template<class T> std::pair<int,int const> * const limit_ptr<T>::get_count_ptr() const { return this->count; }
+template<class T> void limit_ptr<T>::new_copy(T * const subject, int const limit) {
+    std::pair<int,int const> * const temp_count = new std::pair<int,int const>(0,(limit >= 1) ? limit : -1);
+    T * const temp_subject = new T(*subject);
+
+    this->switch_away();
+    this->switch_to(temp_subject,*temp_count);
+
     return;
 }
-template<class T> void limit_ptr<T>::decrement_count() {
-    if (this->count) --(this->count->first);
 
+/*
+ *  @param: void
+ *
+ *  @implementation:
+ *      A constant rvalue boolean; false if COUNT is nulled out or COUNT's count is less than 1 before invoking this function; true if otherwise.
+ *      The function decrements COUNT's count; if the newly decremented value is 0, then COUNT and SUBJECT are deleted.
+ *      COUNT and SUBJECT are then, regardless, set to nullptrs.
+ *
+ *  @guarantee:
+ *      COUNT's count will never be decremented to below 1 (except, it can be decremented to 0, but then COUNT and SUBJECT are deleted).
+ *
+ *  @purpose:
+ *      As the function's name suggests, to "switch-away" focus from one object pointer.
+ *      Therefore, the COUNT first needs to be decremented (and COUNT and SUBJECT need to be deleted if COUNT's count is 0), and then COUNT and SUBJECT need to be nulled.
+ *      This is defined as the action of "switching away focus" from a particular object, since this wrapper is no longer paying attention to it.
+ *      Since this function is only responsible for switching focus away from a particular source, it nulls COUNT and SUBJECT.
+ *      This function is not responsible for switching focus to a new object!
+ *      This function cannot switch away its focus if it has already switched away its focus before!
+*/
+template<class T> bool const limit_ptr<T>::switch_away() {
+    if (!this->count || !this->subject || (this->count->first < 1)) return false;
+
+    --(this->count->first);
     if (!(this->count->first)) {
         delete this->count;
         delete this->subject;
-
-        this->count = nullptr;
-        this->subject = nullptr;
     }
 
-    return;
+    this->count = nullptr;
+    this->subject = nullptr;
+    return true;
+}
+/*
+ *  @param_1: std::pair<int,int const> &
+ *      A reference to an int and a constant int.
+ *      This is the COUNT associated with the new SUBJECT, @param_2.
+ *  @param_2: T * const:
+ *      A constant pointer to a T-templated object.
+ *      This is the new SUBJECT to focus on.
+ *
+ *  @implementation:
+ *      A constant rvalue boolean is returned; false if COUNT or SUBJECT are not nulled out before invoking this function, true if otherwise.
+ *      The function evaluates to see if the limit has been reached; if so, it will create a NEW COPY of the existing COUNT and SUBJECT (with COUNT's count to be 0).
+ *      Else, @param_1 will be set as the new COUNT, the normal incrementation will be performed, and @param_2 will become the new SUBJECT.
+ *
+ *  @purpose:
+ *      @TODO
+*/
+template<class T> bool const limit_ptr<T>::switch_to(T * const subject, std::pair<int,int const> & count) {
+    if (this->count || this->subject) return false;
+    else if (this->at_capacity(count)) this->new_copy(subject,count.second);
+    else {
+        this->count = &count;
+        ++(this->count->first);
+        this->subject = subject;
+    }
+    return true;
+}
+/*
+ *  @param: void
+ *
+ *  @implementation:
+ *      A constant rvalue boolean; false if COUNT is nulled out or COUNT's count is less than 1 before invoking this function; true if otherwise.
+ *      The function decrements COUNT's count; if the newly decremented value is 0, then COUNT and SUBJECT are deleted.
+ *      COUNT and SUBJECT are then, regardless, set to nullptrs.
+ *
+ *  @guarantee:
+ *      COUNT's count will never be decremented to below 1 (except, it can be decremented to 0, but then COUNT and SUBJECT are deleted).
+ *
+ *  @purpose:
+ *      As the function's name suggests, to "switch-away" focus from one object pointer.
+ *      Therefore, the COUNT first needs to be decremented (and COUNT and SUBJECT need to be deleted if COUNT's count is 0), and then COUNT and SUBJECT need to be nulled.
+ *      This is defined as the action of "switching away focus" from a particular object, since this wrapper is no longer paying attention to it.
+ *      Since this function is only responsible for switching focus away from a particular source, it nulls COUNT and SUBJECT.
+ *      This function is not responsible for switching focus to a new object!
+ *      This function cannot switch away its focus if it has already switched away its focus before!
+*/
+template<class T> bool const limit_ptr<T>::at_capacity(std::pair<int,int const> & count) const {
+    if (count.second < 1) return false;
+    return ((count.first) >= (count.second));
 }
 
 template<class T> limit_ptr<T>::limit_ptr() { return; }
-template<class T> limit_ptr<T>::limit_ptr(T * const subject) : subject(subject) { return; }
-template<class T> limit_ptr<T>::limit_ptr(T * const subject, int const limit) : count(new std::pair<int,int const>(1,((limit >= 1) ? limit : -1))), subject(subject) { return; }
-template<class T> limit_ptr<T>::limit_ptr(limit_ptr<T> const & other) : count(other.get_count_ptr()), subject(other.get_subject_ptr()) { this->increment_count(); return; }
-template<class T> limit_ptr<T>::~limit_ptr() { decrement_count(); return; }
+template<class T> limit_ptr<T>::limit_ptr(T * const subject) : subject(subject), count(new std::pair<int,int const>(1,-1)) { return; }
+template<class T> limit_ptr<T>::limit_ptr(T * const subject, int const limit) : subject(subject), count(new std::pair<int,int const>(1,((limit >= 1) ? limit : -1))) { return; }
+template<class T> limit_ptr<T>::limit_ptr(limit_ptr<T> const & other) { this->switch_to(other.get_subject_ptr(),*other.get_count_ptr()); return; }
+template<class T> limit_ptr<T>::~limit_ptr() { this->switch_away(); return; }
 
 template<class T> void limit_ptr<T>::operator=(limit_ptr<T> const & other) {
-    this->decrement_count();
-    this->count = other.get_count_ptr();
-    this->subject = other.get_subject_ptr();
-    this->increment_count();
+    this->switch_away();
+    this->switch_to(other.get_subject_ptr(),*other.get_count_ptr());
 
     return;
 }
-template<class T> bool const limit_ptr<T>::operator==(limit_ptr<T> const & other) const { return (this->count == other.get_count_ptr()) && (this->subject == other.get_subject_ptr()); }
+template<class T> bool const limit_ptr<T>::operator==(limit_ptr<T> const & other) const { return ((this->subject) == (other.get_subject_ptr())) || (*(this->subject) == *(other.get_subject_ptr())); }
 template<class T> bool const limit_ptr<T>::operator!=(limit_ptr<T> const & other) const { return !this->operator==(other); }
 template<class T> T * const limit_ptr<T>::operator->() const { return this->subject; }
 template<class T> T & limit_ptr<T>::operator*() const { return *(this->subject); }
+
+template<class T> void limit_ptr<T>::set(T * const subject, int const limit) {
+    this->new_copy(subject,(limit >= 1) ? limit : -1);
+    return;
+}
 
 template<class T> int const limit_ptr<T>::getCount() const { return this->count->first; }
 template<class T> int const limit_ptr<T>::getLimit() const { return this->count->second; }
 
 template<class T> void limit_ptr<T>::deepCopy() {
-    this->decrement_count();
-    this->count = new std::pair<int,int const>(*(this->count));
-    this->count->first = 1;
-    this->subject = new T(*(this->subject));
+    int const x = this->count->second;
 
+    this->new_copy(this->subject,(x >= 1) ? x : -1);
+    return;
+}
+template<class T> void limit_ptr<T>::deepCopy(int const limit) {
+    this->new_copy(this->subject,(limit >= 1) ? limit : -1);
     return;
 }
 template<class T> void limit_ptr<T>::deepCopy(limit_ptr<T> const & other) {
-    this->decrement_count();
-    this->count = new std::pair<int,int const>(*(this->count));
-    this->count->first = 1;
-    this->subject = new T(*(other.get_subject_ptr()));
+    int const x = this->count->second;
 
+    this->new_copy(other.get_subject_ptr(),(x >= 1) ? x : -1);
+    return;
+}
+template<class T> void limit_ptr<T>::deepCopy(limit_ptr<T> const & other, int const limit) {
+    this->new_copy(other.get_subject_ptr(),(limit >= 1) ? limit : -1);
     return;
 }
