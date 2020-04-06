@@ -9,12 +9,15 @@ template<class T> class limit_ptr {
         T * subject = nullptr;
         std::pair<int,int const> * count = nullptr;
 
+        bool const is_wellformed() const;
+
         T * const get_subject_ptr() const;
         std::pair<int,int const> * const get_count_ptr() const;
         void new_copy(T * const subject, int const limit);
 
         bool const switch_away();
         bool const switch_to(T * const subject, std::pair<int,int const> & count);
+        bool const switch_to(limit_ptr<T> const & other);
         bool const at_capacity(std::pair<int,int const> & count) const;
 
     public:
@@ -43,13 +46,17 @@ template<class T> class limit_ptr {
 
 
 
+template<class T> bool const limit_ptr<T>::is_wellformed() const { return (this->subject && this->count) || (!this->subject && !this->count); }
+
 template<class T> T * const limit_ptr<T>::get_subject_ptr() const { return this->subject; }
 template<class T> std::pair<int,int const> * const limit_ptr<T>::get_count_ptr() const { return this->count; }
 template<class T> void limit_ptr<T>::new_copy(T * const subject, int const limit) {
+    this->switch_away();
+
+    if (!this->is_wellformed() || !subject) return;
+
     std::pair<int,int const> * const temp_count = new std::pair<int,int const>(0,(limit >= 1) ? limit : -1);
     T * const temp_subject = new T(*subject);
-
-    this->switch_away();
     this->switch_to(temp_subject,*temp_count);
 
     return;
@@ -105,6 +112,7 @@ template<class T> bool const limit_ptr<T>::switch_away() {
 */
 template<class T> bool const limit_ptr<T>::switch_to(T * const subject, std::pair<int,int const> & count) {
     if (this->count || this->subject) return false;
+    else if (!subject) return true;
     else if (this->at_capacity(count)) this->new_copy(subject,count.second);
     else {
         this->count = &count;
@@ -112,6 +120,9 @@ template<class T> bool const limit_ptr<T>::switch_to(T * const subject, std::pai
         this->subject = subject;
     }
     return true;
+}
+template<class T> bool const limit_ptr<T>::switch_to(limit_ptr<T> const & other) {
+    return this->switch_to(other.get_subject_ptr(), *other.get_count_ptr());
 }
 /*
  *  @param: void
@@ -138,14 +149,14 @@ template<class T> bool const limit_ptr<T>::at_capacity(std::pair<int,int const> 
 }
 
 template<class T> limit_ptr<T>::limit_ptr() { return; }
-template<class T> limit_ptr<T>::limit_ptr(T * const subject) : subject(subject), count(new std::pair<int,int const>(1,-1)) { return; }
-template<class T> limit_ptr<T>::limit_ptr(T * const subject, int const limit) : subject(subject), count(new std::pair<int,int const>(1,((limit >= 1) ? limit : -1))) { return; }
-template<class T> limit_ptr<T>::limit_ptr(limit_ptr<T> const & other) { this->switch_to(other.get_subject_ptr(),*other.get_count_ptr()); return; }
+template<class T> limit_ptr<T>::limit_ptr(T * const subject) : subject(subject), count(subject ? (new std::pair<int,int const>(1,-1)) : nullptr) { return; }
+template<class T> limit_ptr<T>::limit_ptr(T * const subject, int const limit) : subject(subject), count(subject ? (new std::pair<int,int const>(1,(limit >= 1) ? limit : -1)) : nullptr) { return; }
+template<class T> limit_ptr<T>::limit_ptr(limit_ptr<T> const & other) { this->switch_to(other); return; }
 template<class T> limit_ptr<T>::~limit_ptr() { this->switch_away(); return; }
 
 template<class T> void limit_ptr<T>::operator=(limit_ptr<T> const & other) {
     this->switch_away();
-    this->switch_to(other.get_subject_ptr(),*other.get_count_ptr());
+    this->switch_to(other);
 
     return;
 }
@@ -163,18 +174,22 @@ template<class T> int const limit_ptr<T>::getCount() const { return this->count-
 template<class T> int const limit_ptr<T>::getLimit() const { return this->count->second; }
 
 template<class T> void limit_ptr<T>::deepCopy() {
-    int const x = this->count->second;
+    if (!this->count || !this->subject) return;
 
+    int const x(this->count->second);
     this->new_copy(this->subject,(x >= 1) ? x : -1);
     return;
 }
 template<class T> void limit_ptr<T>::deepCopy(int const limit) {
+    if (!this->count || !this->subject) return;
+
     this->new_copy(this->subject,(limit >= 1) ? limit : -1);
     return;
 }
 template<class T> void limit_ptr<T>::deepCopy(limit_ptr<T> const & other) {
-    int const x = this->count->second;
+    int const x(-1);
 
+    if (this->count && this->subject) x = this->count->second;
     this->new_copy(other.get_subject_ptr(),(x >= 1) ? x : -1);
     return;
 }
