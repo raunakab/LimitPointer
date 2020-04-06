@@ -83,7 +83,7 @@ template<class T> void limit_ptr<T>::deepCopy() {
 template<class T> void limit_ptr<T>::deepCopy(limit_ptr<T> const & other) {
     this->decrement_count();
     this->count = new int(1);
-    this->subject = new T(*other.get_subject_ptr());
+    this->subject = new T(*(other.get_subject_ptr()));
 
     return;
 }
