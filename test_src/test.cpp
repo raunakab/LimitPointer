@@ -68,5 +68,5 @@ int const A::getX() const { return this->x; }
 // }
 
 int main() {
-    limit_ptr<int> a(new int(5));
+    limit_ptr<int> a(5);
 }

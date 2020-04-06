@@ -22,8 +22,8 @@ template<class T> class limit_ptr {
 
     public:
         limit_ptr();
-        limit_ptr(T * const subject);
-        limit_ptr(T * const subject, int const limit);
+        limit_ptr(T && subject);
+        limit_ptr(T && subject, int const limit);
         limit_ptr(limit_ptr<T> const & other);
         ~limit_ptr();
 
@@ -33,7 +33,7 @@ template<class T> class limit_ptr {
         T * const operator->() const;
         T & operator*() const;
 
-        void set(T * const subject, int const limit);
+        void set(T && subject, int const limit);
 
         int const getCount() const;
         int const getLimit() const;
@@ -149,8 +149,8 @@ template<class T> bool const limit_ptr<T>::at_capacity(std::pair<int,int const> 
 }
 
 template<class T> limit_ptr<T>::limit_ptr() { return; }
-template<class T> limit_ptr<T>::limit_ptr(T * const subject) : subject(subject), count(subject ? (new std::pair<int,int const>(1,-1)) : nullptr) { return; }
-template<class T> limit_ptr<T>::limit_ptr(T * const subject, int const limit) : subject(subject), count(subject ? (new std::pair<int,int const>(1,(limit >= 1) ? limit : -1)) : nullptr) { return; }
+template<class T> limit_ptr<T>::limit_ptr(T && subject) : subject(new T(subject)), count(subject ? (new std::pair<int,int const>(1,-1)) : nullptr) { return; }
+template<class T> limit_ptr<T>::limit_ptr(T && subject, int const limit) : subject(new T(subject)), count(subject ? (new std::pair<int,int const>(1,(limit >= 1) ? limit : -1)) : nullptr) { return; }
 template<class T> limit_ptr<T>::limit_ptr(limit_ptr<T> const & other) { this->switch_to(other); return; }
 template<class T> limit_ptr<T>::~limit_ptr() { this->switch_away(); return; }
 
@@ -165,7 +165,7 @@ template<class T> bool const limit_ptr<T>::operator!=(limit_ptr<T> const & other
 template<class T> T * const limit_ptr<T>::operator->() const { return this->subject; }
 template<class T> T & limit_ptr<T>::operator*() const { return *(this->subject); }
 
-template<class T> void limit_ptr<T>::set(T * const subject, int const limit) {
+template<class T> void limit_ptr<T>::set(T && subject, int const limit) {
     this->new_copy(subject,(limit >= 1) ? limit : -1);
     return;
 }
