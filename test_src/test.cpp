@@ -107,10 +107,8 @@ int main() {
 
     limit_ptr<A> a1(new A(),1);
     limit_ptr<A> a2(new A(),20);
-    limit_ptr<A> a3(new A(),123);
-    a2 = a1;
-    a3 = a2;
-    // a2->printMe();
+    if ((a2 = a1)) printf("ACCOMPLISHED\n");
+    else printf("BLOCKED\n");
 
 
 

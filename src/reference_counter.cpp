@@ -7,40 +7,41 @@
 template<class T> class limit_ptr {
     private:
         T * subject = nullptr;
-        std::pair<int,int const> * count = nullptr;
+        std::pair<unsigned int, unsigned int const> * properties = nullptr;
 
         T * const get_subject_ptr() const;
-        std::pair<int,int const> * const get_count_ptr() const;
+        std::pair<unsigned int,unsigned int const> * const get_properties_ptr() const;
 
         bool const switch_away();
-        bool const switch_to(T * const subject, std::pair<int,int const> & count);
+        bool const switch_away_to(T *, std::pair<unsigned int,unsigned int const> *);
+        void unsafe_hard_reset();
 
     public:
         limit_ptr();
-        limit_ptr(T * const && subject);
-        limit_ptr(T * const && subject, int const limit);
-        limit_ptr(limit_ptr<T> const & other);
+        limit_ptr(T * const &&);
+        limit_ptr(T * const &&, unsigned int const);
+        limit_ptr(limit_ptr<T> const &);
         ~limit_ptr();
 
-        void operator=(limit_ptr<T> const & other);
-        bool const operator==(limit_ptr<T> const & other) const;
-        bool const operator!=(limit_ptr<T> const & other) const;
+        bool const operator=(limit_ptr<T> const &);
+        bool const operator==(limit_ptr<T> const &) const;
+        bool const operator!=(limit_ptr<T> const &) const;
         T * const operator->() const;
         T & operator*() const;
 
-        void switchFocus(T * const && subject, int const limit);
-        void setNullptr();
+        bool const switchFocus(T * const &&, unsigned int const);
+        bool const setNullptr();
 
-        int const getCount() const;
-        int const getLimit() const;
+        unsigned int const getCount() const;
+        unsigned int const getLimit() const;
 
-        bool const atCapacity(std::pair<int,int const> & count) const;
+        bool const atCapacity() const;
         bool const isWellformed() const;
         bool const isWellformedNonNull() const;
         bool const isWellformedNull() const;
 
-        void deepCopy(int const limit);
-        void deepCopy(limit_ptr<T> const & other, int const limit);
+        bool const deepCopy(unsigned int const);
+        bool const deepCopy(limit_ptr<T> const &, unsigned int const);
 };
 
 
@@ -80,7 +81,7 @@ template<class T> T * const limit_ptr<T>::get_subject_ptr() const { return this-
  *      Method is private; reserved for internal usage only.
  *      Useful during object construction and object copy assignment to obtain a pointer to another LIMIT_PTR's COUNT.
 */
-template<class T> std::pair<int,int const> * const limit_ptr<T>::get_count_ptr() const { return this->count; }
+template<class T> std::pair<unsigned int,unsigned int const> * const limit_ptr<T>::get_properties_ptr() const { return this->properties; }
 
 
 
@@ -104,44 +105,47 @@ template<class T> std::pair<int,int const> * const limit_ptr<T>::get_count_ptr()
  *      This function cannot switch away its focus if it has already switched away its focus before!
 */
 template<class T> bool const limit_ptr<T>::switch_away() {
-    if (!this->isWellformedNonNull()) return false;
+    if (!this->isWellformedNonNull()) return this->isWellformedNull();
 
-    int const count(--(this->count->first));
+    unsigned int const count(--(this->properties->first));
 
     if (!count) {
-        delete this->count;
         delete this->subject;
+        delete this->properties;
     }
 
-    this->count = nullptr;
     this->subject = nullptr;
+    this->properties = nullptr;
+
     return true;
 }
 /*
- *  @param_1: std::pair<int,int const> &
- *      A reference to an int and a constant int.
- *      This is the COUNT associated with the new SUBJECT, @param_2.
- *  @param_2: T * const:
- *      A constant pointer to a T-templated object.
- *      This is the new SUBJECT to focus on.
- *
+ *  @param:
  *  @implementation:
- *      A constant rvalue boolean is returned; false if COUNT or SUBJECT are not nulled out before invoking this function, true if otherwise.
- *      The function evaluates to see if the limit has been reached; if so, it will create a NEW COPY of the existing COUNT and SUBJECT (with COUNT's count to be 0).
- *      Else, @param_1 will be set as the new COUNT, the normal incrementation will be performed, and @param_2 will become the new SUBJECT.
+ *
+ *  @requirements:
+ *  @guarantee:
  *
  *  @purpose:
- *      @TODO
+ *  @usage:
 */
-template<class T> bool const limit_ptr<T>::switch_to(T * const subject, std::pair<int,int const> & count) {
-    if (!this->isWellformedNull()) return false;
-    else if (!subject) return true;
-    else if (this->atCapacity(count)) this->switchFocus(new T(*subject),count.second);
-    else {
-        this->count = &count;
-        ++(this->count->first);
-        this->subject = subject;
+template<class T> bool const limit_ptr<T>::switch_away_to(T * subject, std::pair<unsigned int, unsigned int const> * properties) {
+    if ((!subject != !properties) || ((this->subject == subject) != (this->properties == properties))) return false;
+    else if ((this->subject == subject) && (this->properties == properties)) return this->isWellformedNonNull();
+    else if (subject && properties) {
+        unsigned int const count(properties->first);
+        unsigned int const limit(properties->second);
+
+        if (limit && (limit <= count)) return false;
     }
+    
+    if (!this->switch_away()) return false;
+    else if (!subject && !properties) return true;
+
+    this->subject = subject;
+    this->properties = properties;
+    ++(this->properties->first);
+
     return true;
 }
 
@@ -168,7 +172,7 @@ template<class T> limit_ptr<T>::limit_ptr() { return; }
  *  @purpose:
  *  @usage:
 */
-template<class T> limit_ptr<T>::limit_ptr(T * const && subject) : subject(subject), count(subject ? (new std::pair<int,int const>(1,-1)) : nullptr) { return; }
+template<class T> limit_ptr<T>::limit_ptr(T * const && subject) : subject(subject), properties(subject ? (new std::pair<unsigned int,unsigned int const>(1,0)) : nullptr) { return; }
 /*
  *  @param:
  *  @implementation:
@@ -179,7 +183,7 @@ template<class T> limit_ptr<T>::limit_ptr(T * const && subject) : subject(subjec
  *  @purpose:
  *  @usage:
 */
-template<class T> limit_ptr<T>::limit_ptr(T * const && subject, int const limit) : subject(subject), count(subject ? (new std::pair<int,int const>(1,(limit >= 1) ? limit : -1)) : nullptr) { return; }
+template<class T> limit_ptr<T>::limit_ptr(T * const && subject, unsigned int const limit) : subject(subject), properties(subject ? (new std::pair<unsigned int,unsigned int const>(1,limit)) : nullptr) { return; }
 /*
  *  @param:
  *  @implementation:
@@ -190,35 +194,8 @@ template<class T> limit_ptr<T>::limit_ptr(T * const && subject, int const limit)
  *  @purpose:
  *  @usage:
 */
-template<class T> limit_ptr<T>::limit_ptr(limit_ptr<T> const & other) { this->switch_to(other.get_subject_ptr(),*other.get_count_ptr()); return; }
-/*
- *  @param:
- *  @implementation:
- *
- *  @requirements:
- *  @guarantee:
- *
- *  @purpose:
- *  @usage:
-*/
-template<class T> limit_ptr<T>::~limit_ptr() { this->switch_away(); return; }
-
-
-
-/*
- *  @param:
- *  @implementation:
- *
- *  @requirements:
- *  @guarantee:
- *
- *  @purpose:
- *  @usage:
-*/
-template<class T> void limit_ptr<T>::operator=(limit_ptr<T> const & other) {
-    this->switch_away();
-    this->switch_to(other.get_subject_ptr(),*other.get_count_ptr());
-
+template<class T> limit_ptr<T>::limit_ptr(limit_ptr<T> const & other) {
+    if (other.isWellformedNonNull()) this->switch_away_to(other.get_subject_ptr(),other.get_properties_ptr());
     return;
 }
 /*
@@ -231,7 +208,40 @@ template<class T> void limit_ptr<T>::operator=(limit_ptr<T> const & other) {
  *  @purpose:
  *  @usage:
 */
-template<class T> bool const limit_ptr<T>::operator==(limit_ptr<T> const & other) const { return (this->subject == other.get_subject_ptr()); }
+template<class T> limit_ptr<T>::~limit_ptr() {
+    this->switch_away();
+    return;
+}
+
+
+
+/*
+ *  @param:
+ *  @implementation:
+ *
+ *  @requirements:
+ *  @guarantee:
+ *
+ *  @purpose:
+ *  @usage:
+*/
+template<class T> bool const limit_ptr<T>::operator=(limit_ptr<T> const & other) {
+    return this->switch_away_to(other.get_subject_ptr(),other.get_properties_ptr());
+}
+/*
+ *  @param:
+ *  @implementation:
+ *
+ *  @requirements:
+ *  @guarantee:
+ *
+ *  @purpose:
+ *  @usage:
+*/
+template<class T> bool const limit_ptr<T>::operator==(limit_ptr<T> const & other) const {
+    if (!this->isWellformed() || !other.isWellformed()) return false;
+    return (this->subject == other.get_subject_ptr()) && (this->properties == other.get_properties_ptr());
+}
 /*
  *  @param:
  *  @implementation:
@@ -253,7 +263,7 @@ template<class T> bool const limit_ptr<T>::operator!=(limit_ptr<T> const & other
  *  @purpose:
  *  @usage:
 */
-template<class T> T * const limit_ptr<T>::operator->() const { return this->subject; }
+template<class T> T * const limit_ptr<T>::operator->() const { return this->isWellformedNonNull() ? this->subject : nullptr; }
 /*
  *  @param:
  *  @implementation:
@@ -264,7 +274,7 @@ template<class T> T * const limit_ptr<T>::operator->() const { return this->subj
  *  @purpose:
  *  @usage:
 */
-template<class T> T & limit_ptr<T>::operator*() const { return *(this->subject); }
+template<class T> T & limit_ptr<T>::operator*() const { return this->isWellformedNonNull() ? *(this->subject) : *(new limit_ptr<T>()); }
 
 
 
@@ -308,17 +318,15 @@ template<class T> T & limit_ptr<T>::operator*() const { return *(this->subject);
  *      Method is private; reserved for internal usage only.
  *      Useful to easily and safely switch focus from an old subject to a new subject.
 */
-template<class T> void limit_ptr<T>::switchFocus(T * const && subject, int const limit) {
-    if (!this->isWellformed()) return;
+template<class T> bool const limit_ptr<T>::switchFocus(T * const && subject, unsigned int const limit) {
+    std::pair<unsigned int,unsigned int const> * const temp_properties(new std::pair<unsigned int,unsigned int const>(0,limit));
+    if (!this->switch_away_to(subject,temp_properties)) {
+        if (subject) delete subject;
+        delete temp_properties;
+        return false;
+    }
 
-    this->switch_away();
-    if (!subject) return;
-
-    std::pair<int,int const> * const temp_count = new std::pair<int,int const>(0,(limit >= 1) ? limit : -1);
-    T * const temp_subject = subject;
-    this->switch_to(temp_subject,*temp_count);
-
-    return;
+    return true;
 }
 /*
  *  @param:
@@ -330,10 +338,7 @@ template<class T> void limit_ptr<T>::switchFocus(T * const && subject, int const
  *  @purpose:
  *  @usage:
 */
-template<class T> void limit_ptr<T>::setNullptr() {
-    this->switchFocus(nullptr,this->count->second);
-    return;
-}
+template<class T> bool const limit_ptr<T>::setNullptr() { return this->switch_away(); }
 
 
 
@@ -347,7 +352,7 @@ template<class T> void limit_ptr<T>::setNullptr() {
  *  @purpose:
  *  @usage:
 */
-template<class T> int const limit_ptr<T>::getCount() const { return this->count->first; }
+template<class T> unsigned int const limit_ptr<T>::getCount() const { return this->isWellformedNonNull() ? this->properties->first : 0; }
 /*
  *  @param:
  *  @implementation:
@@ -358,32 +363,26 @@ template<class T> int const limit_ptr<T>::getCount() const { return this->count-
  *  @purpose:
  *  @usage:
 */
-template<class T> int const limit_ptr<T>::getLimit() const { return this->count->second; }
+template<class T> unsigned int const limit_ptr<T>::getLimit() const { return this->isWellformedNonNull() ? this->properties->second : 0; }
 
 
 
 /*
- *  @param: void
- *
+ *  @param:
  *  @implementation:
- *      A constant rvalue boolean; false if COUNT is nulled out or COUNT's count is less than 1 before invoking this function; true if otherwise.
- *      The function decrements COUNT's count; if the newly decremented value is 0, then COUNT and SUBJECT are deleted.
- *      COUNT and SUBJECT are then, regardless, set to nullptrs.
  *
+ *  @requirements:
  *  @guarantee:
- *      COUNT's count will never be decremented to below 1 (except, it can be decremented to 0, but then COUNT and SUBJECT are deleted).
  *
  *  @purpose:
- *      As the function's name suggests, to "switch-away" focus from one object pointer.
- *      Therefore, the COUNT first needs to be decremented (and COUNT and SUBJECT need to be deleted if COUNT's count is 0), and then COUNT and SUBJECT need to be nulled.
- *      This is defined as the action of "switching away focus" from a particular object, since this wrapper is no longer paying attention to it.
- *      Since this function is only responsible for switching focus away from a particular source, it nulls COUNT and SUBJECT.
- *      This function is not responsible for switching focus to a new object!
- *      This function cannot switch away its focus if it has already switched away its focus before!
+ *  @usage:
 */
-template<class T> bool const limit_ptr<T>::atCapacity(std::pair<int,int const> & count) const {
-    if (count.second < 1) return false;
-    return ((count.first) >= (count.second));
+template<class T> bool const limit_ptr<T>::atCapacity() const {
+    unsigned int limit(this->getLimit());
+    if (!limit) return false;
+
+    unsigned int count(this->getCount());
+    return count >= limit;
 }
 /*
  *  @param: void
@@ -416,12 +415,13 @@ template<class T> bool const limit_ptr<T>::isWellformed() const { return this->i
  *  @usage:
 */
 template<class T> bool const limit_ptr<T>::isWellformedNonNull() const {
-    if (this->subject && this->count) {
-        int const count(this->count->first);
-        int const limit(this->count->second);
+    if (this->subject && this->properties) {
+        unsigned int const count(this->properties->first);
+        unsigned int const limit(this->properties->second);
 
-        return (limit <= 0) || ((1 <= count) && (count <= limit));
-    } else return false;
+        return (!limit) || ((1 <= count) && (count <= limit));
+    }
+    return false;
 }
 /*
  *  @param:
@@ -433,7 +433,7 @@ template<class T> bool const limit_ptr<T>::isWellformedNonNull() const {
  *  @purpose:
  *  @usage:
 */
-template<class T> bool const limit_ptr<T>::isWellformedNull() const { return !this->subject && !this->count; }
+template<class T> bool const limit_ptr<T>::isWellformedNull() const { return !this->subject && !this->properties; }
 
 
 
@@ -447,11 +447,20 @@ template<class T> bool const limit_ptr<T>::isWellformedNull() const { return !th
  *  @purpose:
  *  @usage:
 */
-template<class T> void limit_ptr<T>::deepCopy(int const limit) {
-    if (!this->isWellformedNonNull()) return;
+template<class T> bool const limit_ptr<T>::deepCopy(unsigned int const limit) {
+    if (!this->isWellformedNonNull()) return this->isWellformedNull();
 
-    this->switchFocus(new T(*this->subject),(limit >= 1) ? limit : -1);
-    return;
+    T * const temp_subject(new T(*this->subject));
+    std::pair<unsigned int,unsigned int const> * const temp_properties(new std::pair<unsigned int,unsigned int const>(0,limit));
+
+    if (!this->switch_away_to(temp_subject,temp_properties)) {
+        delete temp_subject;
+        delete temp_properties;
+
+        return false;
+    }
+    
+    return true;
 }
 /*
  *  @param:
@@ -463,14 +472,21 @@ template<class T> void limit_ptr<T>::deepCopy(int const limit) {
  *  @purpose:
  *  @usage:
 */
-template<class T> void limit_ptr<T>::deepCopy(limit_ptr<T> const & other, int const limit) {
-    if (!this->isWellformed() || !other.isWellformed()) return;
-    else if (!other.isWellformedNonNull()) {
-        this->switch_away();
-        return;
+template<class T> bool const limit_ptr<T>::deepCopy(limit_ptr<T> const & other, unsigned int const limit) {
+    T * temp_subject(nullptr);
+    std::pair<unsigned int,unsigned int const> * temp_properties(nullptr);
+
+    if (other.isWellformedNonNull()) {
+        temp_subject = new T(*other.get_subject_ptr());
+        temp_properties = new std::pair<unsigned int,unsigned int const>(*other.get_properties_ptr());
+    } else if (!other.isWellformedNull()) return false;
+
+    if (!this->switch_away_to(temp_subject,temp_properties)) {
+        delete temp_subject;
+        delete temp_properties;
+
+        return false;
     }
 
-    T * const otherSubject = other.get_subject_ptr();
-    this->switchFocus(new T(*otherSubject),(limit >= 1) ? limit : -1);
-    return;
+    return true;
 }
