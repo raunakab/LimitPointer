@@ -94,7 +94,7 @@ This prevents the malformity to spreading to the WELLFORMED a2 object.
 __*Note 2:*__
 Here, the assignment operator would fail again. This may seem unintuitive; why prevent a malformed object from being turned into a wellformed object again?
 Well, suppose two limit_ptrs pointed to two separate *__subject__* objects, but their *__properties__* but pointed towards the same std::pair.
-Therefore, if the first object switched away, it would decremented the count. But since the limit_ptrs both point to the same *__properties__* object, an improper decrementation would occur.
+Therefore, if the first object switched away, it will decrement the count. But since the limit_ptrs both point to the same *__properties__* object, an improper decrementation would have occurred.
 Thus, a malformed limit_ptr will always remain a malformed limit_ptr.
 
 When developing this class, much attention was paid to ensuring that malformed objects do not ever arise. (Thus, if malformed objects ever arise, something has gone very, very wrong...)
