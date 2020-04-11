@@ -7,6 +7,9 @@ Basic pointer manipulation, similar to how regular pointer manipulation, can be 
 This is because the operator*, operator=, and operator-> are all overloaded to make usage of the limit_ptr wrapper object as simple as possible.
 
 With regular pointers, the following would result in memory leakages and dangling pointers.
+
+    #include "/path/to/ReferenceCounter/src/reference_counter.cpp"
+
     class A { /* ... */ };
     int main() {
         A * a1(new A());
@@ -23,6 +26,9 @@ With regular pointers, the following would result in memory leakages and danglin
     }
 
 But with limit_ptrs, the above code can be typed out without having to think about the above fatal errors.
+
+    #include "/path/to/ReferenceCounter/src/reference_counter.cpp"
+
     class A { /* ... */ };
     int main() {
         limit_ptr<A> a1(new A());
