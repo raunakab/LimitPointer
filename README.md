@@ -99,4 +99,4 @@ Thus, a malformed limit_ptr will always remain a malformed limit_ptr.
 
 When developing this class, much attention was paid to ensuring that malformed objects do not ever arise. (Thus, if malformed objects ever arise, something has gone very, very wrong...)
 I also paid much attention to ensuring that MALFORMED objects do not proliferate and spread their malformity to other objects.
-This is why operations, such as assignment, to or from a alformed object, do not occur!
+This is why operations, such as assignment, to or from a malformed object, do not occur!
