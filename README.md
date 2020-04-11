@@ -41,9 +41,11 @@ But with limit_ptrs, the above code can be typed out without having to think abo
 
         a1->doSomething();          // not a dangling pointer
 
+        a1 = nullptr;               // deletes *a1 since no more references point to it; A::~A() is invoked
+
         return 0;                   // code exits with neither a segmentation fault or memory leak
     }
 
 
 # Implementation
-Each limit_ptr wrapper object is just 2 pointers: one to the actual subject in question, and another to a local std::pair
+Each limit_ptr wrapper object is just 2 pointers: one to the actual subject in question, and another to a local std::pair<unsigned int,unsigned int const>
