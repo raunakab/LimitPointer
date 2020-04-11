@@ -11,6 +11,8 @@ template<class T> class limit_ptr {
 
         T * const get_subject_ptr() const;
         std::pair<unsigned int,unsigned int const> * const get_properties_ptr() const;
+        int const get_count() const;
+        int const get_limit() const;
 
         bool const switch_away();
         bool const switch_away_to(T *, std::pair<unsigned int,unsigned int const> *);
@@ -82,6 +84,28 @@ template<class T> T * const limit_ptr<T>::get_subject_ptr() const { return this-
  *      Useful during object construction and object copy assignment to obtain a pointer to another LIMIT_PTR's COUNT.
 */
 template<class T> std::pair<unsigned int,unsigned int const> * const limit_ptr<T>::get_properties_ptr() const { return this->properties; }
+/*
+ *  @param:
+ *  @implementation:
+ *
+ *  @requirements:
+ *  @guarantee:
+ *
+ *  @purpose:
+ *  @usage:
+*/
+template<class T> int const limit_ptr<T>::get_count() const { return this->properties->first; }
+/*
+ *  @param:
+ *  @implementation:
+ *
+ *  @requirements:
+ *  @guarantee:
+ *
+ *  @purpose:
+ *  @usage:
+*/
+template<class T> int const limit_ptr<T>::get_limit() const { return this->properties->second; }
 
 
 
@@ -108,7 +132,6 @@ template<class T> bool const limit_ptr<T>::switch_away() {
     if (!this->isWellformedNonNull()) return this->isWellformedNull();
 
     unsigned int const count(--(this->properties->first));
-
     if (!count) {
         delete this->subject;
         delete this->properties;
@@ -131,7 +154,7 @@ template<class T> bool const limit_ptr<T>::switch_away() {
 */
 template<class T> bool const limit_ptr<T>::switch_away_to(T * subject, std::pair<unsigned int, unsigned int const> * properties) {
     if ((!subject != !properties) || ((this->subject == subject) != (this->properties == properties))) return false;
-    else if ((this->subject == subject) && (this->properties == properties)) return this->isWellformedNonNull();
+    else if ((this->subject == subject) && (this->properties == properties)) return this->isWellformed();
     else if (subject && properties) {
         unsigned int const count(properties->first);
         unsigned int const limit(properties->second);
@@ -226,7 +249,8 @@ template<class T> limit_ptr<T>::~limit_ptr() {
  *  @usage:
 */
 template<class T> bool const limit_ptr<T>::operator=(limit_ptr<T> const & other) {
-    return this->switch_away_to(other.get_subject_ptr(),other.get_properties_ptr());
+    if (other.isWellformed()) return this->switch_away_to(other.get_subject_ptr(),other.get_properties_ptr());
+    return false;
 }
 /*
  *  @param:
@@ -274,7 +298,7 @@ template<class T> T * const limit_ptr<T>::operator->() const { return this->isWe
  *  @purpose:
  *  @usage:
 */
-template<class T> T & limit_ptr<T>::operator*() const { return this->isWellformedNonNull() ? *(this->subject) : *(new limit_ptr<T>()); }
+template<class T> T & limit_ptr<T>::operator*() const { return this->isWellformedNonNull() ? *this->subject : *(new limit_ptr<T>()); }
 
 
 
@@ -378,10 +402,12 @@ template<class T> unsigned int const limit_ptr<T>::getLimit() const { return thi
  *  @usage:
 */
 template<class T> bool const limit_ptr<T>::atCapacity() const {
-    unsigned int limit(this->getLimit());
-    if (!limit) return false;
+    if (!this->isWellformedNonNull()) return false;
 
-    unsigned int count(this->getCount());
+    unsigned int limit(this->get_limit());
+    unsigned int count(this->get_count());
+
+    if (!limit) return false;
     return count >= limit;
 }
 /*
@@ -478,12 +504,12 @@ template<class T> bool const limit_ptr<T>::deepCopy(limit_ptr<T> const & other, 
 
     if (other.isWellformedNonNull()) {
         temp_subject = new T(*other.get_subject_ptr());
-        temp_properties = new std::pair<unsigned int,unsigned int const>(*other.get_properties_ptr());
+        temp_properties = new std::pair<unsigned int,unsigned int const>(0,limit);
     } else if (!other.isWellformedNull()) return false;
 
     if (!this->switch_away_to(temp_subject,temp_properties)) {
-        delete temp_subject;
-        delete temp_properties;
+        if (temp_subject) delete temp_subject;
+        if (temp_properties) delete temp_properties;
 
         return false;
     }
