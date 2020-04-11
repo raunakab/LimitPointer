@@ -69,11 +69,19 @@
 // }
 
 class A {
+    private:
+        int x = -1;
+
     public:
         A();
+        A(int const x);
         A(A const &);
         virtual ~A();
 
+        void operator=(A const & other);
+
+        void setX(int const x);
+        int const getX() const;
         void printMe() const;
 };
 class B : public A {
@@ -84,37 +92,40 @@ class B : public A {
 };
 
 A::A() { printf("A_dflt\n"); return; }
-A::A(A const & other) { printf("A_cpy\n"); return; }
+A::A(int const x) : x(x) { printf("A_rglr\n"); return; }
+A::A(A const & other) : x(other.getX()) { printf("A_cpy\n"); return; }
 A::~A() { printf("A_dstr\n"); return; }
-void A::printMe() const { printf("Hello, world!\n"); return; }
+
+void A::operator=(A const & other) { printf("A_asn_opr\n"); this->x = other.getX(); }
+
+void A::setX(int const x) { this->x = x; return; }
+int const A::getX() const { return this->x; }
+void A::printMe() const { printf("%i\n",this->x); return; }
+
+
 
 B::B() : A() { printf("B_dflt\n"); return; }
 B::B(B const & other) : A() { printf("B_cpy\n"); return; }
 B::~B() { printf("B_dstr\n"); return; }
 
 int main() {
-    // limit_ptr<int> a(int(5));
-    // printf("%i\n",*a);
+    limit_ptr<A> a1(new A(1));
+    limit_ptr<A> a2(new A(2));
 
-    // limit_ptr<A> a_1(new A());
+    a1->printMe();
+    a2->printMe();
 
-    // A * a1 = new A();
-    // A * a2 = new A();
-    // a2 = a1;
-    // a2->printMe();
+    a2 = a1;
+    printf("\n\n");
 
+    a1->printMe();
+    a2->printMe();
 
+    a1 = a2;
+    printf("\n\n");
 
-    limit_ptr<A> a1(new A(),1);
-    limit_ptr<A> a2(new A(),20);
-    if ((a2 = a1)) printf("ACCOMPLISHED\n");
-    else printf("BLOCKED\n");
-
-
-
-    // B * b(new B());
-    // printf("\n\n");
-    // A * a(new B());
+    a1->printMe();
+    a2->printMe();
 
     printf("exiting main\n");
 

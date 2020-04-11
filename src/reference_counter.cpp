@@ -26,6 +26,7 @@ template<class T> class limit_ptr {
         ~limit_ptr();
 
         bool const operator=(limit_ptr<T> const &);
+        bool const operator=(T * const &&);
         bool const operator==(limit_ptr<T> const &) const;
         bool const operator!=(limit_ptr<T> const &) const;
         T * const operator->() const;
@@ -262,6 +263,27 @@ template<class T> bool const limit_ptr<T>::operator=(limit_ptr<T> const & other)
  *  @purpose:
  *  @usage:
 */
+template<class T> bool const limit_ptr<T>::operator=(T * const && subject) {
+    std::pair<unsigned int,unsigned int const> * const temp_properties(subject ? (new std::pair<unsigned int,unsigned int const>(0,0)) : nullptr);
+    if (!this->switch_away_to(subject,temp_properties)) {
+        if (subject) delete subject;
+        if (temp_properties) delete temp_properties;
+
+        return false;
+    }
+
+    return true;
+}
+/*
+ *  @param:
+ *  @implementation:
+ *
+ *  @requirements:
+ *  @guarantee:
+ *
+ *  @purpose:
+ *  @usage:
+*/
 template<class T> bool const limit_ptr<T>::operator==(limit_ptr<T> const & other) const {
     if (!this->isWellformed() || !other.isWellformed()) return false;
     return (this->subject == other.get_subject_ptr()) && (this->properties == other.get_properties_ptr());
@@ -343,10 +365,11 @@ template<class T> T & limit_ptr<T>::operator*() const { return this->isWellforme
  *      Useful to easily and safely switch focus from an old subject to a new subject.
 */
 template<class T> bool const limit_ptr<T>::switchFocus(T * const && subject, unsigned int const limit) {
-    std::pair<unsigned int,unsigned int const> * const temp_properties(new std::pair<unsigned int,unsigned int const>(0,limit));
+    std::pair<unsigned int,unsigned int const> * const temp_properties(subject ? (new std::pair<unsigned int,unsigned int const>(0,limit)) : nullptr);
     if (!this->switch_away_to(subject,temp_properties)) {
         if (subject) delete subject;
-        delete temp_properties;
+        if (temp_properties) delete temp_properties;
+        
         return false;
     }
 
@@ -407,8 +430,7 @@ template<class T> bool const limit_ptr<T>::atCapacity() const {
     unsigned int limit(this->get_limit());
     unsigned int count(this->get_count());
 
-    if (!limit) return false;
-    return count >= limit;
+    return limit ? (count >= limit) : false;
 }
 /*
  *  @param: void
