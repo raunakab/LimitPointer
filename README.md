@@ -48,4 +48,5 @@ But with limit_ptrs, the above code can be typed out without having to think abo
 
 
 # Implementation
-Each limit_ptr wrapper object is just 2 pointers: one to the actual subject in question, and another to a local std::pair<unsigned int,unsigned int const>
+Each limit_ptr wrapper object is just 2 pointers: one to the actual subject in question, and another to a std::pair<unsigned int,unsigned int const>.
+Let the pointer to the actual object be called __*subject*__ and the pointer to the std::pair be called *__properties__*.
